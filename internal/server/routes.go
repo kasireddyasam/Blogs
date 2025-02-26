@@ -1,63 +1,152 @@
 package server
 
 import (
+	"Blogs_Backend/internal/database"
 	"encoding/json"
-	"log"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
-func (s *Server) RegisterRoutes() http.Handler {
-	mux := http.NewServeMux()
+// Create User
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+	var user database.User
 
-	// Register routes
-	mux.HandleFunc("/", s.HelloWorldHandler)
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "Invalid JSON input", http.StatusBadRequest)
+		return
+	}
 
-	mux.HandleFunc("/health", s.healthHandler)
+	database.DB.Create(&user)
 
-	// Wrap the mux with CORS middleware
-	return s.corsMiddleware(mux)
-}
-
-func (s *Server) corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Set CORS headers
-		w.Header().Set("Access-Control-Allow-Origin", "*") // Replace "*" with specific origins if needed
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-CSRF-Token")
-		w.Header().Set("Access-Control-Allow-Credentials", "false") // Set to "true" if credentials are required
-
-		// Handle preflight OPTIONS requests
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		// Proceed with the next handler
-		next.ServeHTTP(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "User created",
+		"user":    user,
 	})
 }
 
-func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
-	resp := map[string]string{"message": "Hello World"}
-	jsonResp, err := json.Marshal(resp)
-	if err != nil {
-		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+// Create Post
+func CreatePost(w http.ResponseWriter, r *http.Request) {
+	var post database.Post
+
+	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
+		http.Error(w, "Invalid JSON input", http.StatusBadRequest)
 		return
 	}
+
+	database.DB.Create(&post)
+
 	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write(jsonResp); err != nil {
-		log.Printf("Failed to write response: %v", err)
-	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Post created",
+		"post":    post,
+	})
 }
 
-func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
-	resp, err := json.Marshal(s.db.Health())
-	if err != nil {
-		http.Error(w, "Failed to marshal health check response", http.StatusInternalServerError)
+// Create Comment
+func CreateComment(w http.ResponseWriter, r *http.Request) {
+	var comment database.Comment
+
+	if err := json.NewDecoder(r.Body).Decode(&comment); err != nil {
+		http.Error(w, "Invalid JSON input", http.StatusBadRequest)
 		return
 	}
+
+	database.DB.Create(&comment)
+
 	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write(resp); err != nil {
-		log.Printf("Failed to write response: %v", err)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Comment created",
+		"comment": comment,
+	})
+}
+
+// Get All Posts
+func GetAllPosts(w http.ResponseWriter, r *http.Request) {
+	var posts []database.Post
+	database.DB.Find(&posts)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts)
+}
+
+// Get Post by ID
+func GetPostByID(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var post database.Post
+
+	if err := database.DB.First(&post, id).Error; err != nil {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(post)
+}
+
+// Get All Posts by a Specific User
+func GetUserPosts(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "user_id")
+	var posts []database.Post
+
+	database.DB.Where("user_id = ?", userID).Find(&posts)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts)
+}
+
+// Update Post
+func UpdatePost(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var post database.Post
+
+	if err := database.DB.First(&post, id).Error; err != nil {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
+		http.Error(w, "Invalid JSON input", http.StatusBadRequest)
+		return
+	}
+
+	database.DB.Save(&post)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Post updated",
+		"post":    post,
+	})
+}
+
+// Delete Post
+func DeletePost(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	if err := database.DB.Delete(&database.Post{}, id).Error; err != nil {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "Post deleted",
+	})
+}
+
+// Setup API Routes using Chi
+func SetupRoutes() *chi.Mux {
+	r := chi.NewRouter()
+
+	r.Post("/users", CreateUser)
+	r.Post("/posts", CreatePost)
+	r.Post("/comments", CreateComment)
+	r.Get("/posts", GetAllPosts)
+	r.Get("/posts/{id}", GetPostByID)
+	r.Get("/user/{user_id}/posts", GetUserPosts)
+	r.Put("/posts/{id}", UpdatePost)
+	r.Delete("/posts/{id}", DeletePost)
+
+	return r
 }
