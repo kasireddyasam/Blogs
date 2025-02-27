@@ -4,6 +4,7 @@ import (
 	"Blogs_Backend/internal/database"
 	"encoding/json"
 	"net/http"
+	"Blogs_Backend/internal/utils"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -16,6 +17,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON input", http.StatusBadRequest)
 		return
 	}
+	user.Password = utils.HashPassword(user.Password)
 
 	database.DB.Create(&user)
 
@@ -23,6 +25,30 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message": "User created",
 		"user":    user,
+	})
+}
+// Login (Password verification) // email and password
+func LoginUser(res http.ResponseWriter , req *http.Request){
+	var inputUser database.User
+	var foundUser database.User
+
+	if err:=json.NewDecoder(req.Body).Decode(&inputUser); err!=nil{
+		http.Error(res,"Invalied JSON input",http.StatusBadRequest)  // res,error string,num status 
+		return 
+	}
+	if err:=database.DB.Where("email=?",inputUser.Email).Find(&foundUser).Error; err!=nil{
+		http.Error(res,"user not found",http.StatusBadRequest)
+		return 
+	}
+	if utils.HashPassword(inputUser.Password)!=foundUser.Password {
+		http.Error(res,"Invalied password",http.StatusUnauthorized)
+		return
+	}
+	// sucessful message
+	res.Header().Set("Content-Type","applicationn/json")
+	json.NewEncoder(res).Encode(map[string]interface{}{
+		"message":"Login Sucessfull",
+		"user": foundUser,
 	})
 }
 
@@ -140,6 +166,7 @@ func SetupRoutes() *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Post("/users", CreateUser)
+	r.Post("/login",LoginUser)
 	r.Post("/posts", CreatePost)
 	r.Post("/comments", CreateComment)
 	r.Get("/posts", GetAllPosts)
