@@ -2,22 +2,25 @@ package server
 
 import (
 	"Blogs_Backend/internal/database"
+	"Blogs_Backend/internal/utils"
 	"encoding/json"
 	"net/http"
-	"Blogs_Backend/internal/utils"
-
+	"strconv"
+	"fmt"
 	"github.com/go-chi/chi/v5"
 )
 
 // Create User
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 	var user database.User
+	salt:=utils.GenerateSalt()
 
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, "Invalid JSON input", http.StatusBadRequest)
 		return
 	}
-	user.Password = utils.HashPassword(user.Password)
+	user.Password = utils.HashPassword(user.Password, salt)
+	user.Salt = salt
 
 	database.DB.Create(&user)
 
@@ -27,40 +30,41 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		"user":    user,
 	})
 }
+
 // Login (Password verification) // email and password
-func LoginUser(res http.ResponseWriter , req *http.Request){
+func LoginUser(res http.ResponseWriter, req *http.Request) {
 	var inputUser database.User
 	var foundUser database.User
 
-	if err:=json.NewDecoder(req.Body).Decode(&inputUser); err!=nil{
-		http.Error(res,"Invalied JSON input",http.StatusBadRequest)  // res,error string,num status 
-		return 
+	if err := json.NewDecoder(req.Body).Decode(&inputUser); err != nil {
+		http.Error(res, "Invalied JSON input", http.StatusBadRequest) // res,error string,num status
+		return
 	}
-	if err:=database.DB.Where("email=?",inputUser.Email).Find(&foundUser).Error; err!=nil{
-		http.Error(res,"user not found",http.StatusBadRequest)
-		return 
+	if err := database.DB.Where("email=?", inputUser.Email).Find(&foundUser).Error; err != nil {
+		http.Error(res, "user not found", http.StatusBadRequest)
+		return
 	}
-	if utils.HashPassword(inputUser.Password)!=foundUser.Password {
-		http.Error(res,"Invalied password",http.StatusUnauthorized)
+	if utils.HashPassword(inputUser.Password ,foundUser.Salt) != foundUser.Password {
+		http.Error(res, "Invalied password", http.StatusUnauthorized)
 		return
 	}
 	// sucessful message
-	res.Header().Set("Content-Type","applicationn/json")
+	res.Header().Set("Content-Type", "applicationn/json")
 	json.NewEncoder(res).Encode(map[string]interface{}{
-		"message":"Login Sucessfull",
-		"user": foundUser,
+		"message": "Login Sucessfull",
+		"user":    foundUser,
 	})
 }
 
 // Create Post
 func CreatePost(w http.ResponseWriter, r *http.Request) {
 	var post database.Post
-
+	fmt.Println(r.Body)
 	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
 		http.Error(w, "Invalid JSON input", http.StatusBadRequest)
 		return
 	}
-
+	
 	database.DB.Create(&post)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -78,7 +82,6 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON input", http.StatusBadRequest)
 		return
 	}
-
 	database.DB.Create(&comment)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -164,9 +167,10 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 // Setup API Routes using Chi
 func SetupRoutes() *chi.Mux {
 	r := chi.NewRouter()
+	
 
-	r.Post("/users", CreateUser)
-	r.Post("/login",LoginUser)
+	r.Post("/user/signup", CreateUser)
+	r.Post("/login", LoginUser)
 	r.Post("/posts", CreatePost)
 	r.Post("/comments", CreateComment)
 	r.Get("/posts", GetAllPosts)
