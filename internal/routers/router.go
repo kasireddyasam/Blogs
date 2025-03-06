@@ -8,7 +8,6 @@ import (
 	"net/http"
 )
 
-
 func StartServer() {
 	r := SetupRoutes()
 	http.ListenAndServe(":8080", r)

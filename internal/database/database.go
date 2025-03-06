@@ -1,9 +1,9 @@
 package database
 
 import (
-	"Blogs_Backend/internal/model"
-	"fmt"
+	"Blogs_Backend/internal/entities"
 
+	"fmt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -22,6 +22,6 @@ func ConnectDB() {
 	fmt.Println("Database connected successfully!")
 
 	// Run Migrations
-	db.AutoMigrate(&model.User{}, &model.Post{}, &model.Comment{})
+	db.AutoMigrate(&entities.User{}, &entities.Post{}, &entities.Comment{})
 	fmt.Println("Tables are created")
 }
