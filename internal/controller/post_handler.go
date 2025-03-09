@@ -34,7 +34,7 @@ func (h *PostHandlerImpl) CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate user data
-	if err := utils.Validator.Struct(post); err != nil {
+	if err := utils.Validator.Var(post.UserID, "required"); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -97,6 +97,20 @@ func (h *PostHandlerImpl) GetAllUsers(res http.ResponseWriter, req *http.Request
 	json.NewEncoder(res).Encode(users)
 }
 
+// find user by email
+func (h *PostHandlerImpl) FindUserByEmail(res http.ResponseWriter, req *http.Request) {
+	var user entities.User
+	if err := json.NewDecoder(req.Body).Decode(&user); err != nil {
+		http.Error(res, "invalied url", http.StatusBadRequest)
+		return 
+	}
+	if err:=utils.Validator.Var(user.Email,"required");err!=nil{
+		http.Error(res,"invalied email",http.StatusBadRequest)
+		return
+	}
+	h.postService.FindUserByEmail(user.Email)
+}
+
 // Get All Posts
 func (h *PostHandlerImpl) GetAllPosts(res http.ResponseWriter, req *http.Request) {
 	//var posts []entities.Post
@@ -125,7 +139,7 @@ func (h *PostHandlerImpl) GetPostByID(res http.ResponseWriter, req *http.Request
 		http.Error(res, "invalid Json File", http.StatusBadRequest)
 	}
 	// validator
-	if err := utils.Validator.Var(post.ID,"required"); err != nil {
+	if err := utils.Validator.Var(post.ID, "required"); err != nil {
 		http.Error(res, "id is should not be nil", 400)
 		return
 	}
@@ -159,7 +173,7 @@ func (h *PostHandlerImpl) GetUserPosts(res http.ResponseWriter, req *http.Reques
 		http.Error(res, fmt.Sprintf("Invalied UserId %d", userID), 400)
 	}
 	// validation
-	if err := utils.Validator.Var(post.UserID,"required"); err != nil {
+	if err := utils.Validator.Var(post.UserID, "required"); err != nil {
 		http.Error(res, "input fields are missing", 400)
 		return
 	}
@@ -212,7 +226,7 @@ func (h *PostHandlerImpl) DeletePost(res http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	if err := utils.Validator.Var(post.ID,"required"); err != nil {
+	if err := utils.Validator.Var(post.ID, "required"); err != nil {
 		http.Error(res, "input fields are missing", 400)
 		return
 	}

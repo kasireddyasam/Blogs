@@ -14,10 +14,10 @@ func SetupRoutes() *chi.Mux {
 	fmt.Println("New router is created")
 
 	// Initialize Service Layer
-	postService := server.NewService()
+	Service := server.NewService()
 
 	// Initialize Controller with Service Layer
-	Controller := controller.NewPostController(postService)
+	Controller := controller.NewPostController(Service)
 
 	// User Routes
 	r.Route("/user", func(r chi.Router) {
@@ -42,6 +42,7 @@ func SetupRoutes() *chi.Mux {
 
 	r.Get("/users", Controller.GetAllUsers)
 	r.Get("/{user_id}/posts", Controller.GetUserPosts)
+	r.Get("/user/{email}", Controller.FindUserByEmail)
 
 	return r
 }

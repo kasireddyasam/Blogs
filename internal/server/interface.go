@@ -15,7 +15,7 @@ type PostService interface {
 	DeletePost(id uint) error
 	GetAllPosts() ([]entities.Post, error)
 	CreateUser(user entities.User) error
-	LoginUser(user entities.User) (entities.User, error)
+	LoginUser(user entities.User) (string, error)
 	CreateComment(comment entities.Comment) error
 }
 

@@ -18,16 +18,7 @@ type Repo interface {
 	CreateComment(comment entities.Comment) error
 }
 
-// type CommentRepo interface {
-// 	CreateComment(comment entities.Comment) error
-// }
 
-// type UserRepo interface {
-// 	CreateUser(user entities.User) error
-// 	LoginUser(user entities.User) (entities.User, error)
-// }
-
-// Constructor
 func NewRepository() Repo {
 	return &RepoImplement{}
 }

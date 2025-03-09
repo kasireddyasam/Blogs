@@ -47,25 +47,34 @@ func (h *PostHandlerImpl) CreateUser(w http.ResponseWriter, r *http.Request) {
 func (h *PostHandlerImpl) LoginUser(res http.ResponseWriter, req *http.Request) {
 	var user entities.User
 
+	// Decode JSON request
 	if err := json.NewDecoder(req.Body).Decode(&user); err != nil {
-		http.Error(res, `{"errorInvalid JSON input": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(res, `{"error": "Invalid JSON input"}`, http.StatusBadRequest)
 		return
 	}
 
+	// Validate fields
 	if err := utils.Validator.Var(user.Email, "required,email"); err != nil {
-		http.Error(res, "fields values can't be null", 500)
+		http.Error(res, `{"error": "Invalid email format"}`, http.StatusBadRequest)
 		return
 	}
-	user, err := h.postService.LoginUser(user)
-	if err != nil {
-		http.Error(res, "internal server issu", http.StatusInternalServerError)
-		return 
+	if err := utils.Validator.Var(user.Password, "required"); err != nil {
+		http.Error(res, `{"error": "Password is required"}`, http.StatusBadRequest)
+		return
 	}
 
-	// sucessful message
-	res.Header().Set("Content-Type", "applicationn/json")
-	json.NewEncoder(res).Encode(map[string]interface{}{
-		"message": "Login Sucessfull",
-		"user":    user,
+	// Call service layer to authenticate user and get JWT token
+	token, err := h.postService.LoginUser(user)
+	if err != nil {
+		http.Error(res, `{"error": "Invalid credentials"}`, http.StatusUnauthorized)
+		return
+	}
+
+	// Send response with JWT token
+	res.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(res).Encode(map[string]string{
+		"message": "Login Successful",
+		"token":   token,
 	})
 }
+
