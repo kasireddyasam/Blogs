@@ -3,13 +3,18 @@ import React from "react";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
+import CreatNewAccount from "./pages/CreateNewAccount"
 
 function App(){
-  return (<Routes>
-    <Route path="/" element={<HomePage/>}/>
-    <Route path="/login" element={<LoginPage/>}/>
-    <Route path="/profile/:id" element={<ProfilePage/>}/>
+  return (<div>
+    <Routes>
+    <Route path="/" element={<LoginPage/>}></Route>
+    <Route path="/register" element={<CreatNewAccount/>}></Route>
+    <Route path="/home" element={<HomePage/>}/>
+    <Route path="/progile" element={<ProfilePage/>}/>
   </Routes>
+  </div>
+  
   );
 }
 export  default App;
